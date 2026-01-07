@@ -1,0 +1,3 @@
+module IRGenCrash {
+    header "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/include/IRGenCrash-Swift.h"
+}

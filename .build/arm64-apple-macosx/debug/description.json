@@ -1,0 +1,235 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.IRGenCrash-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/sources",
+      "importPath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/Sources/IRGenCrash/Crash.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "IRGenCrash",
+      "moduleOutputPath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/Modules/IRGenCrash.swiftmodule",
+      "objects" : [
+        "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/Crash.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx26.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/include/IRGenCrash-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "swift_issue_irgen_async_typed_throws_noncopyable"
+      ],
+      "outputFileMapPath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/Crash.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/Modules/IRGenCrash.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/Sources/IRGenCrash/Crash.swift"
+      ],
+      "tempsPath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "IRGenCrash" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "IRGenCrash",
+      "-package-name",
+      "swift_issue_irgen_async_typed_throws_noncopyable",
+      "-c",
+      "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/Sources/IRGenCrash/Crash.swift",
+      "-I",
+      "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx26.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/include/IRGenCrash-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "swift_issue_irgen_async_typed_throws_noncopyable",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "IRGenCrash" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/Sources/IRGenCrash/Crash.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/IRGenCrash.build/sources"
+    },
+    "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/coen/Developer/coenttb/swift-issue-irgen-async-typed-throws-noncopyable/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
