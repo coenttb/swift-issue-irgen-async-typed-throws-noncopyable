@@ -6,9 +6,9 @@ The Swift compiler crashes with signal 11 during IR generation when an async fun
 
 ## Environment
 
-- Swift 6.2 (development snapshot)
-- macOS 26
-- Crash occurs in `swift::irgen::emitAsyncReturn`
+- **Swift version**: 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+- **Target**: arm64-apple-macosx26.0
+- **Crash location**: `swift::irgen::emitAsyncReturn`
 
 ## Minimal Reproduction
 
@@ -36,7 +36,7 @@ extension Container where Resource: ~Copyable {
 ## To Reproduce
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/coenttb/swift-issue-irgen-async-typed-throws-noncopyable
 cd swift-issue-irgen-async-typed-throws-noncopyable
 swift build
 ```
@@ -45,12 +45,16 @@ swift build
 
 ```
 error: compile command failed due to signal 11 (use -v to see invocation)
-<unknown>:0: error: LLVM ERROR: null operand!
-Please file a bug report at https://github.com/swiftlang/swift and include the crash backtrace.
+Please submit a bug report (https://swift.org/contributing/#reporting-bugs) and include the crash backtrace.
 Stack dump:
+0.  Program arguments: swift-frontend -frontend -c ...
+1.  Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+2.  Compiling with the current language version
+3.  While evaluating request IRGenRequest(IR Generation for file "...")
+4.  While emitting IR SIL function "@$s10IRGenCrash9ContainerOAARi_zrlE7acquireAcARi_zrlE2IDVyx_GyYaAcARi_zrlE5ErrorOyx_GYKFZ".
+ for 'acquire()' (at .../Crash.swift:40:12)
 ...
-While emitting IR SIL function "@$s10IRGenCrash9ContainerOAARi_zrlE7acquireAcARi_zrlE2IDVyx_GyYaAcARi_zrlE5ErrorOyx_GYKFZ"
-for 'acquire()' (at /Users/.../Crash.swift:40:12)
+4  swift-frontend  swift::irgen::emitAsyncReturn(...) + 904
 ```
 
 ## Conditions Required
@@ -60,56 +64,88 @@ All four conditions must be present to trigger the crash:
 | Condition | Description |
 |-----------|-------------|
 | 1. Generic with inverse constraint | `Container<Resource: ~Copyable>` |
-| 2. Nested types under generic | `Container.Error`, `Container.ID` |
-| 3. Async function | `async` |
-| 4. Typed throws with nested error | `throws(Error)` |
+| 2. Nested error type under generic | `Container.Error` in `throws(Error)` |
+| 3. Async function | `async` keyword |
+| 4. Typed throws | `throws(Error)` syntax |
 
-## Proof: Removing Any Condition Prevents Crash
+## Isolation Tests
+
+The reproduction includes tests to isolate the exact trigger:
 
 ```swift
-// ✅ WORKS: Sync function (no async)
-public static func acquireSync() throws(Error) -> ID { ID(0) }
+// ❌ CRASHES: Nested error only (top-level return type)
+public static func acquireNestedErrorOnly() async throws(Error) -> TopLevelID
 
-// ✅ WORKS: Untyped throws
-public static func acquireUntyped() async throws -> ID { ID(0) }
+// ✅ WORKS: Nested return only (top-level error type)
+public static func acquireNestedReturnOnly() async throws(TopLevelError) -> ID
+
+// ✅ WORKS: Sync function with nested types
+public static func acquireSync() throws(Error) -> ID
+
+// ✅ WORKS: Async with untyped throws
+public static func acquireUntyped() async throws -> ID
 
 // ✅ WORKS: No ~Copyable constraint
 public enum RegularContainer<Resource> {
-    public enum Error: Swift.Error { case shutdown }
-    public static func acquire() async throws(Error) -> ID { ... }
+    public static func acquire() async throws(Error) -> ID
 }
 
-// ✅ WORKS: Non-nested types
-public enum TopLevelError: Swift.Error { case shutdown }
-extension Container {
-    public static func acquireTopLevel() async throws(TopLevelError) -> TopLevelID { ... }
-}
+// ✅ WORKS: Typealiases to hoisted types
+public typealias Error = HoistedError  // defined at top level
+public static func acquire() async throws(Error) -> ID
 ```
+
+**Key finding**: The crash is triggered specifically by the **nested error type** in the typed throws position, not the return type.
 
 ## Analysis
 
-The crash occurs in `swift::irgen::emitAsyncReturn` when the compiler attempts to emit IR for an async function that:
-- Returns a nested type (`Container<Resource>.ID`)
-- Throws a nested type (`Container<Resource>.Error`)
-- Where `Resource` has an inverse constraint (`~Copyable`)
+The crash occurs in `swift::irgen::emitAsyncReturn` during IR emission. The mangled name shows the inverse generic requirement marker (`ABRi_zrl`) appearing in both the error and return type positions:
 
-The issue appears to be in how the compiler handles the combination of:
-1. Async coroutine lowering
-2. Typed error type metadata
-3. Nested type substitution under inverse generic constraints
+```
+@$s10IRGenCrash9ContainerOAARi_zrlE7acquireAcARi_zrlE2IDVyx_GyYaAcARi_zrlE5ErrorOyx_GYKFZ
+                          ^^^^^^^^                ^^^^^^^^                    ^^^^^^^^
+                          inverse                 inverse                     inverse
+                          requirement             requirement                 requirement
+```
 
-## Workarounds
+The issue appears to be in how IRGen handles metadata paths for nested types under inverse generic constraints when emitting async return sequences for typed throws.
 
-1. **Use untyped throws**: Replace `throws(Error)` with `throws`
-2. **Make function synchronous**: Remove `async`
-3. **Hoist nested types to top-level**: Define `Error` and `ID` outside the generic
-4. **Remove ~Copyable constraint**: Use regular `Copyable` resources
+## Workaround
+
+Hoist error types to top-level and re-export via typealiases:
+
+```swift
+// Hoisted (not nested under generic)
+public enum PoolError: Swift.Error, Sendable {
+    case shutdown
+}
+
+public enum Container<Resource: ~Copyable> {
+    public typealias Error = PoolError  // Re-export for API consistency
+}
+
+extension Container where Resource: ~Copyable {
+    // ✅ WORKS: Typealias avoids the crash
+    public static func acquire() async throws(Error) -> ID {
+        ID(0)
+    }
+}
+```
+
+## Related Issues
+
+This appears related to the broader class of typed-throws IRGen crashes:
+
+- [#77297](https://github.com/swiftlang/swift/issues/77297) - Typed throws with nested generic type crashes compiler
+- [#83011](https://github.com/swiftlang/swift/issues/83011) - Async typed throws in generic context crashes compiler
+
+The distinguishing factor here is the **inverse generic constraint** (`~Copyable`) which adds additional complexity to the type metadata paths.
 
 ## Impact
 
-This bug blocks adoption of typed throws in any library that:
-- Uses `~Copyable` generics (common in resource management)
-- Defines domain-specific error types as nested types (common pattern)
-- Uses async APIs (modern Swift concurrency)
+This bug blocks adoption of typed throws in libraries that:
+- Use `~Copyable` generics (resource management, ownership patterns)
+- Define domain-specific error types as nested types (common Swift pattern)
+- Use async APIs (modern Swift concurrency)
 
-This is a significant limitation for resource management libraries that want to use Swift 6's typed throws feature with noncopyable types.
+This combination is common in I/O and resource management libraries where typed throws would provide significant API ergonomics benefits.

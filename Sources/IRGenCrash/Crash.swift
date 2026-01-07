@@ -75,3 +75,44 @@ extension Container where Resource: ~Copyable {
         TopLevelID(value: 0)
     }
 }
+
+// MARK: - Isolating which nested type triggers the crash
+
+extension Container where Resource: ~Copyable {
+    // ❌ CRASHES: Nested error only (top-level return)
+    public static func acquireNestedErrorOnly() async throws(Error) -> TopLevelID {
+        TopLevelID(value: 0)
+    }
+
+    // ✅ WORKS: Nested return only (top-level error)
+    public static func acquireNestedReturnOnly() async throws(TopLevelError) -> ID {
+        ID(0)
+    }
+}
+
+// MARK: - Workaround: Type hoisting with typealias re-export
+
+/// Hoisted error type (not nested under generic)
+public enum HoistedError: Swift.Error, Sendable {
+    case shutdown
+    case timeout
+}
+
+/// Hoisted ID type (not nested under generic)
+public struct HoistedID: Hashable, Sendable {
+    public let value: Int
+    public init(_ value: Int) { self.value = value }
+}
+
+public enum WorkaroundContainer<Resource: ~Copyable> {
+    /// Re-export hoisted types as typealiases for API consistency
+    public typealias Error = HoistedError
+    public typealias ID = HoistedID
+}
+
+extension WorkaroundContainer where Resource: ~Copyable {
+    // ✅ WORKS: Typealiases to hoisted types avoid the crash
+    public static func acquire() async throws(Error) -> ID {
+        ID(0)
+    }
+}
