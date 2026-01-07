@@ -1,8 +1,10 @@
-# Swift IRGen Crash: Async + Typed Throws + Nested Types + ~Copyable
+# Swift IRGen Crash: Async Function with Typed Throws and Nested Error Type Under Generic
 
 ## Description
 
-The Swift compiler crashes with signal 11 during IR generation when an async function uses typed throws with a nested error type under a generic with an inverse constraint (`~Copyable`).
+The Swift compiler crashes with signal 11 during IR generation when an async function uses typed throws with a nested error type under **any** generic type.
+
+**Note**: This bug does NOT require `~Copyable` - any generic parameter triggers it.
 
 ## Environment
 
@@ -10,26 +12,12 @@ The Swift compiler crashes with signal 11 during IR generation when an async fun
 - **Target**: arm64-apple-macosx26.0
 - **Crash location**: `swift::irgen::emitAsyncReturn`
 
-## Minimal Reproduction
+## Minimal Reproduction (4 lines)
 
 ```swift
-public enum Container<Resource: ~Copyable> {}
-
-extension Container where Resource: ~Copyable {
-    public enum Error: Swift.Error, Sendable {
-        case shutdown
-    }
-
-    public struct ID: Hashable, Sendable {
-        public let value: Int
-    }
-}
-
-extension Container where Resource: ~Copyable {
-    // THIS CRASHES THE COMPILER
-    public static func acquire() async throws(Error) -> ID {
-        ID(0)
-    }
+public enum Box<T> {
+    public enum Error: Swift.Error { case fail }
+    public static func go() async throws(Error) {}  // CRASHES
 }
 ```
 
@@ -41,74 +29,52 @@ cd swift-issue-irgen-async-typed-throws-noncopyable
 swift build
 ```
 
+Or directly:
+
+```bash
+echo 'public enum Box<T> { public enum Error: Swift.Error { case fail }; public static func go() async throws(Error) {} }' > /tmp/crash.swift
+swiftc -parse-as-library -emit-ir /tmp/crash.swift
+```
+
 ## Crash Output
 
 ```
 error: compile command failed due to signal 11 (use -v to see invocation)
-Please submit a bug report (https://swift.org/contributing/#reporting-bugs) and include the crash backtrace.
 Stack dump:
-0.  Program arguments: swift-frontend -frontend -c ...
+0.  Program arguments: swift-frontend -frontend -emit-ir ...
 1.  Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
-2.  Compiling with the current language version
+2.  Compiling with effective version 5.10
 3.  While evaluating request IRGenRequest(IR Generation for file "...")
-4.  While emitting IR SIL function "@$s10IRGenCrash9ContainerOAARi_zrlE7acquireAcARi_zrlE2IDVyx_GyYaAcARi_zrlE5ErrorOyx_GYKFZ".
- for 'acquire()' (at .../Crash.swift:40:12)
+4.  While emitting IR SIL function "@$s6test103BoxO2goyyYaAC5ErrorOyx_GYKFZ".
+ for 'go()' (at .../crash.swift:12:12)
 ...
 4  swift-frontend  swift::irgen::emitAsyncReturn(...) + 904
 ```
 
 ## Conditions Required
 
-All four conditions must be present to trigger the crash:
+All three conditions must be present to trigger the crash:
 
 | Condition | Description |
 |-----------|-------------|
-| 1. Generic with inverse constraint | `Container<Resource: ~Copyable>` |
-| 2. Nested error type under generic | `Container.Error` in `throws(Error)` |
-| 3. Async function | `async` keyword |
-| 4. Typed throws | `throws(Error)` syntax |
+| 1. Generic type | Any generic parameter (e.g., `Box<T>`) |
+| 2. Nested error type | Error type defined inside the generic |
+| 3. Async + typed throws | `async throws(NestedError)` |
 
-## Isolation Tests
+## Verified Test Results
 
-The reproduction includes tests to isolate the exact trigger:
+| Test | Description | Result |
+|------|-------------|--------|
+| Sync function | `throws(Error)` without `async` | ✅ Compiles |
+| Untyped throws | `async throws` (not typed) | ✅ Compiles |
+| Non-generic | `Box` without generic parameter | ✅ Compiles |
+| Top-level error | `throws(TopLevelError)` | ✅ Compiles |
+| Nested return only | Nested return type, top-level error | ✅ Compiles |
+| Typealias workaround | `typealias Error = HoistedError` | ✅ Compiles |
+| With ~Copyable | `Box<T: ~Copyable>` | ❌ Crashes (same bug) |
+| Minimal generic | `Box<T>` with nested error | ❌ Crashes |
 
-```swift
-// ❌ CRASHES: Nested error only (top-level return type)
-public static func acquireNestedErrorOnly() async throws(Error) -> TopLevelID
-
-// ✅ WORKS: Nested return only (top-level error type)
-public static func acquireNestedReturnOnly() async throws(TopLevelError) -> ID
-
-// ✅ WORKS: Sync function with nested types
-public static func acquireSync() throws(Error) -> ID
-
-// ✅ WORKS: Async with untyped throws
-public static func acquireUntyped() async throws -> ID
-
-// ✅ WORKS: No ~Copyable constraint
-public enum RegularContainer<Resource> {
-    public static func acquire() async throws(Error) -> ID
-}
-
-// ✅ WORKS: Typealiases to hoisted types
-public typealias Error = HoistedError  // defined at top level
-public static func acquire() async throws(Error) -> ID
-```
-
-**Key finding**: The crash is triggered specifically by the **nested error type** in the typed throws position, not the return type.
-
-## Analysis
-
-The crash occurs in `swift::irgen::emitAsyncReturn` during IR emission. The mangled name shows the inverse generic requirement marker (`ABRi_zrl`) appearing in both the error and return type positions:
-
-```
-@$s10IRGenCrash9ContainerOAARi_zrlE7acquireAcARi_zrlE2IDVyx_GyYaAcARi_zrlE5ErrorOyx_GYKFZ
-                          ^^^^^^^^                ^^^^^^^^                    ^^^^^^^^
-                          inverse                 inverse                     inverse
-                          requirement             requirement                 requirement
-```
-
-The issue appears to be in how IRGen handles metadata paths for nested types under inverse generic constraints when emitting async return sequences for typed throws.
+**Key finding**: The crash is triggered specifically by the **nested error type in typed throws position** under any generic. `~Copyable` is not required.
 
 ## Workaround
 
@@ -116,36 +82,26 @@ Hoist error types to top-level and re-export via typealiases:
 
 ```swift
 // Hoisted (not nested under generic)
-public enum PoolError: Swift.Error, Sendable {
-    case shutdown
-}
+public enum BoxError: Swift.Error { case fail }
 
-public enum Container<Resource: ~Copyable> {
-    public typealias Error = PoolError  // Re-export for API consistency
-}
-
-extension Container where Resource: ~Copyable {
-    // ✅ WORKS: Typealias avoids the crash
-    public static func acquire() async throws(Error) -> ID {
-        ID(0)
-    }
+public enum Box<T> {
+    public typealias Error = BoxError
+    public static func go() async throws(Error) {}  // ✅ Works
 }
 ```
 
 ## Related Issues
 
-This appears related to the broader class of typed-throws IRGen crashes:
+This appears related to:
 
 - [#77297](https://github.com/swiftlang/swift/issues/77297) - Typed throws with nested generic type crashes compiler
 - [#83011](https://github.com/swiftlang/swift/issues/83011) - Async typed throws in generic context crashes compiler
 
-The distinguishing factor here is the **inverse generic constraint** (`~Copyable`) which adds additional complexity to the type metadata paths.
-
 ## Impact
 
-This bug blocks adoption of typed throws in libraries that:
-- Use `~Copyable` generics (resource management, ownership patterns)
-- Define domain-specific error types as nested types (common Swift pattern)
-- Use async APIs (modern Swift concurrency)
+This blocks adoption of typed throws in any library that:
+- Uses generic types (very common)
+- Defines domain-specific error types as nested types (common Swift pattern)
+- Uses async APIs (modern Swift concurrency)
 
-This combination is common in I/O and resource management libraries where typed throws would provide significant API ergonomics benefits.
+This is a common pattern in I/O, networking, and resource management libraries.

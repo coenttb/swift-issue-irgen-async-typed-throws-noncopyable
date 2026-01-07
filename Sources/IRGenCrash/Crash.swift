@@ -1,118 +1,61 @@
-/// Minimal reproduction for Swift compiler IRGen crash.
+/// IRGen Crash: Async Function with Typed Throws and Nested Error Type Under Generic
 ///
-/// The compiler crashes (signal 11) when all four conditions are met:
-/// 1. Generic type with inverse constraint (~Copyable)
-/// 2. Nested types (Error, ID) under that generic
-/// 3. Async function
-/// 4. Typed throws with the nested error type
+/// The compiler crashes (signal 11) during IR generation when ALL THREE conditions are met:
+/// 1. Generic type (any generic parameter)
+/// 2. Nested error type under that generic
+/// 3. Async function with typed throws using the nested error
 ///
-/// Removing ANY ONE of these conditions prevents the crash.
+/// Note: ~Copyable is NOT required - any generic triggers this.
 
-// MARK: - Container with ~Copyable constraint
+// MARK: - Minimal Reproduction (4 lines)
 
-public enum Container<Resource: ~Copyable> {}
-
-// MARK: - Nested types under ~Copyable generic
-
-extension Container where Resource: ~Copyable {
-    public enum Error: Swift.Error, Sendable {
-        case shutdown
-        case timeout
-    }
-
-    public struct ID: Hashable, Sendable {
-        public let value: Int
-        public init(_ value: Int) { self.value = value }
-    }
+public enum Box<T> {
+    public enum Error: Swift.Error { case fail }
+    public static func go() async throws(Error) {}  // CRASHES
 }
 
-// MARK: - Async function with typed throws returning nested type
-// THIS CRASHES THE COMPILER
+// MARK: - Verified Working Cases
 
-extension Container where Resource: ~Copyable {
-    /// This function signature triggers the IRGen crash.
-    ///
-    /// The crash occurs in `swift::irgen::emitAsyncReturn` when the compiler
-    /// attempts to emit IR for an async function that:
-    /// - throws a nested type (Container<Resource>.Error)
-    /// - returns a nested type (Container<Resource>.ID)
-    /// - where Resource has an inverse constraint (~Copyable)
-    public static func acquire() async throws(Error) -> ID {
-        ID(0)
-    }
+// ✅ WORKS: Sync function (no async)
+public enum SyncBox<T> {
+    public enum Error: Swift.Error { case fail }
+    public static func go() throws(Error) {}
 }
 
-// MARK: - Proof that removing any condition prevents the crash
-
-extension Container where Resource: ~Copyable {
-    // ✅ WORKS: Sync function (no async)
-    public static func acquireSync() throws(Error) -> ID {
-        ID(0)
-    }
-
-    // ✅ WORKS: Untyped throws
-    public static func acquireUntyped() async throws -> ID {
-        ID(0)
-    }
+// ✅ WORKS: Untyped throws
+public enum UntypedBox<T> {
+    public enum Error: Swift.Error { case fail }
+    public static func go() async throws {}
 }
 
-// ✅ WORKS: No ~Copyable constraint
-public enum RegularContainer<Resource> {
-    public enum Error: Swift.Error, Sendable { case shutdown }
-    public struct ID: Hashable, Sendable { let value: Int }
-
-    public static func acquire() async throws(Error) -> ID {
-        ID(value: 0)
-    }
+// ✅ WORKS: Non-generic container
+public enum NonGenericBox {
+    public enum Error: Swift.Error { case fail }
+    public static func go() async throws(Error) {}
 }
 
-// ✅ WORKS: Non-nested types
-public enum TopLevelError: Swift.Error, Sendable { case shutdown }
-public struct TopLevelID: Hashable, Sendable { let value: Int }
-
-extension Container where Resource: ~Copyable {
-    public static func acquireTopLevel() async throws(TopLevelError) -> TopLevelID {
-        TopLevelID(value: 0)
-    }
+// ✅ WORKS: Top-level error type
+public enum TopError: Swift.Error { case fail }
+public enum TopErrorBox<T> {
+    public static func go() async throws(TopError) {}
 }
 
-// MARK: - Isolating which nested type triggers the crash
-
-extension Container where Resource: ~Copyable {
-    // ❌ CRASHES: Nested error only (top-level return)
-    public static func acquireNestedErrorOnly() async throws(Error) -> TopLevelID {
-        TopLevelID(value: 0)
-    }
-
-    // ✅ WORKS: Nested return only (top-level error)
-    public static func acquireNestedReturnOnly() async throws(TopLevelError) -> ID {
-        ID(0)
-    }
+// ✅ WORKS: Nested return type is fine (only error triggers crash)
+public enum NestedReturnBox<T> {
+    public struct Result { let value: Int }
+    public static func go() async throws(TopError) -> Result { Result(value: 0) }
 }
 
-// MARK: - Workaround: Type hoisting with typealias re-export
-
-/// Hoisted error type (not nested under generic)
-public enum HoistedError: Swift.Error, Sendable {
-    case shutdown
-    case timeout
-}
-
-/// Hoisted ID type (not nested under generic)
-public struct HoistedID: Hashable, Sendable {
-    public let value: Int
-    public init(_ value: Int) { self.value = value }
-}
-
-public enum WorkaroundContainer<Resource: ~Copyable> {
-    /// Re-export hoisted types as typealiases for API consistency
+// ✅ WORKS: Typealias to hoisted type
+public enum HoistedError: Swift.Error { case fail }
+public enum TypealiasBox<T> {
     public typealias Error = HoistedError
-    public typealias ID = HoistedID
+    public static func go() async throws(Error) {}
 }
 
-extension WorkaroundContainer where Resource: ~Copyable {
-    // ✅ WORKS: Typealiases to hoisted types avoid the crash
-    public static func acquire() async throws(Error) -> ID {
-        ID(0)
-    }
+// MARK: - Also crashes with ~Copyable (but ~Copyable is not the cause)
+
+public enum CopyableBox<T: ~Copyable> {
+    public enum Error: Swift.Error { case fail }
+    public static func go() async throws(Error) {}  // CRASHES (same bug)
 }
